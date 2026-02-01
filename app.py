@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
 import PyPDF2
-import pandas as pd # Necesitamos esto para las tablas bonitas
+import pandas as pd  # La herramienta para las tablas
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Norma LifeOS", page_icon="🧿", layout="wide")
@@ -18,6 +18,7 @@ st.markdown("""
         padding: 15px; border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+    /* Estilo para que la tabla se vea profesional */
     .stDataFrame { border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -29,10 +30,10 @@ with st.sidebar:
     
     selected = option_menu(
         menu_title="Menú Principal",
-        # ¡Agregamos MIRA a la lista! 💙
+        # ¡Agregamos el módulo MIRA!
         options=["Dashboard", "💙 MIRA", "🧠 Inteligencia Doc", "🏛️ Alcaldía", "🚀 Numbra", "💎 Sueños"],
         icons=["grid", "people-fill", "file-earmark-text", "bank", "rocket-takeoff", "gem"],
-        default_index=1, 
+        default_index=1,
     )
     
     st.divider()
@@ -51,8 +52,7 @@ elif selected == "💙 MIRA":
     st.title("💙 Gestión Política - MIRA")
     st.markdown("Control de actividades y compromiso social.")
 
-    # 1. VISIÓN GENERAL (Métricas arriba)
-    # Inicializamos las tareas si no existen en la memoria temporal
+    # 1. BASE DE DATOS TEMPORAL (Para que veas el ejemplo)
     if 'mira_data' not in st.session_state:
         st.session_state['mira_data'] = [
             {"Actividad": "Reunión de Líderes", "Responsable": "Norma", "Estado": "Pendiente", "Avance": 0},
@@ -60,18 +60,19 @@ elif selected == "💙 MIRA":
             {"Actividad": "Capacitación Electoral", "Responsable": "Norma", "Estado": "Listo", "Avance": 100},
         ]
 
-    # Convertimos la lista en una tabla (DataFrame)
+    # Crear la tabla editable
     df = pd.DataFrame(st.session_state['mira_data'])
 
-    # Editor de Datos (Aquí es donde ocurre la magia)
     st.subheader("📋 Lista de Tareas y Compromisos")
+    
+    # Aquí configuramos la tabla para que tenga barras de progreso
     edited_df = st.data_editor(
         df,
-        num_rows="dynamic", # ¡Esto te permite agregar filas nuevas!
+        num_rows="dynamic", # ¡Permite agregar filas nuevas!
         column_config={
             "Avance": st.column_config.ProgressColumn(
                 "Progreso %",
-                help="¿Cuánto hemos avanzado?",
+                help="Nivel de cumplimiento",
                 min_value=0,
                 max_value=100,
                 format="%d%%",
@@ -86,17 +87,16 @@ elif selected == "💙 MIRA":
         hide_index=True,
     )
 
-    # Cálculo de métricas automáticas
-    total_tareas = len(edited_df)
-    tareas_listas = len(edited_df[edited_df["Estado"] == "Listo"])
-    porcentaje_global = (tareas_listas / total_tareas) if total_tareas > 0 else 0
+    # Métricas automáticas (calculadas de tu tabla)
+    total = len(edited_df)
+    completadas = len(edited_df[edited_df["Estado"] == "Listo"])
+    progreso_total = (completadas / total) if total > 0 else 0
 
     st.divider()
     col1, col2 = st.columns([3, 1])
     col1.write("### Progreso General del Partido")
-    col1.progress(porcentaje_global, text=f"Cumplimiento: {int(porcentaje_global*100)}%")
-    
-    col2.metric("Tareas Completadas", f"{tareas_listas}/{total_tareas}")
+    col1.progress(progreso_total, text=f"Cumplimiento Global: {int(progreso_total*100)}%")
+    col2.metric("Tareas Realizadas", f"{completadas}/{total}")
 
 elif selected == "🧠 Inteligencia Doc":
     st.title("🧠 Analizador de Documentos")
@@ -106,23 +106,16 @@ elif selected == "🧠 Inteligencia Doc":
         reader = PyPDF2.PdfReader(uploaded_file)
         text = ""
         for page in reader.pages: text += page.extract_text()
-        st.success(f"✅ Documento de {len(reader.pages)} páginas procesado.")
+        st.success(f"✅ Procesado: {len(reader.pages)} páginas.")
         
-        search = st.text_input("🔍 Buscar en el documento:")
+        search = st.text_input("🔍 Buscar palabra clave:")
         if search:
             count = text.lower().count(search.lower())
-            if count > 0: st.info(f"Encontré la palabra '{search}' {count} veces.")
-            else: st.warning("No encontré esa palabra.")
+            if count > 0: st.info(f"Encontré '{search}' {count} veces.")
+            else: st.warning("No encontrado.")
+            
         with st.expander("Ver texto completo"): st.write(text)
-
-elif selected == "🏛️ Alcaldía":
-    st.title("🏛️ Alcaldía de Cali")
-    st.write("Próximamente: Tablero de control de Calidad...")
-
-elif selected == "🚀 Numbra":
-    st.title("🚀 Proyecto Numbra")
-    st.write("Próximamente: Calculadora financiera...")
 
 elif selected == "💎 Sueños":
     st.title("💎 Mapa de Sueños")
-    st.write("Inglés • Viajes • Carro")
+    st.write("Tus metas personales...")
