@@ -1,135 +1,108 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
-import time
+import PyPDF2  # La herramienta para leer PDFs
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Norma LifeOS", page_icon="🧿", layout="wide")
 
-# --- ESTILOS CSS (DISEÑO BLINDADO & LEGIBLE) ---
+# --- ESTILOS CSS ---
 st.markdown("""
 <style>
-    /* Fondo claro para toda la app */
     .stApp { background-color: #F8FAFC; }
-    
-    /* FORZAR TEXTO NEGRO en todas partes */
-    h1, h2, h3, p, div, span, label { color: #0f172a !important; }
-    
-    /* Estilo de las Tarjetas (Metrics) */
+    h1, h2, h3, p, div, span, label, li { color: #0f172a !important; }
     div.stMetric {
         background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0;
-        padding: 15px;
-        border-radius: 10px;
+        padding: 15px; border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     div.stMetric label { color: #64748b !important; }
-    div.stMetric div { color: #0f172a !important; }
     
-    /* Estilo de las Tarjetas de Sueños */
-    .dream-card {
-        background-color: white !important;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 5px solid #6366F1;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        margin-bottom: 10px;
+    /* Estilo para el área de carga de archivos */
+    .stFileUploader {
+        padding: 20px; border: 2px dashed #6366F1; border-radius: 10px; background-color: #EEF2FF;
     }
-    .dream-card h3 { color: #4338ca !important; font-weight: bold; }
     
-    /* Estilo del Modo Zen */
-    .zen-mode {
-        text-align: center; padding: 50px; background-color: #E0F2F1; border-radius: 20px;
-    }
+    .zen-mode { text-align: center; padding: 50px; background-color: #E0F2F1; border-radius: 20px; }
     .zen-mode h1 { color: #2e7d32 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- ESTADO DE PÁNICO (SESSION STATE) ---
-if 'zen_mode' not in st.session_state:
-    st.session_state['zen_mode'] = False
+# --- MODO ZEN ---
+if 'zen_mode' not in st.session_state: st.session_state['zen_mode'] = False
+def activar_zen(): st.session_state['zen_mode'] = True
+def desactivar_zen(): st.session_state['zen_mode'] = False
 
-def activar_zen():
-    st.session_state['zen_mode'] = True
-
-def desactivar_zen():
-    st.session_state['zen_mode'] = False
-
-# --- LÓGICA DE MODO ZEN (PANTALLA LIMPIA) ---
 if st.session_state['zen_mode']:
     st.markdown('<div class="zen-mode">', unsafe_allow_html=True)
-    st.title("🌿 Espacio de Calma para Norma")
-    st.image("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80", caption="Respira...")
-    
-    st.markdown("### 🌬️ Técnica 4-7-8")
-    st.write("1. Inhala profundo (4 seg)...")
-    st.write("2. Retén el aire (7 seg)...")
-    st.write("3. Exhala suavemente (8 seg)...")
-    
+    st.title("🌿 Espacio de Calma")
+    st.image("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80")
+    st.write("Inhala (4)... Retén (7)... Exhala (8)...")
     st.divider()
-    if st.button("🔙 Ya me siento mejor (Volver al LifeOS)"):
+    if st.button("🔙 Volver al LifeOS"):
         desactivar_zen()
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-    st.stop() 
+    st.stop()
 
 # --- BARRA LATERAL ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4140/4140048.png", width=80)
     st.write("## Hola, Norma 👋")
-    st.caption("Gerente de Proyectos | LifeOS v1.0")
     
     selected = option_menu(
-        menu_title="Navegación",
-        options=["Dashboard Principal", "🏛️ Alcaldía Cali", "🚀 Numbra", "🤝 PMO Hub", "🧘‍♀️ Vida & Sueños"],
-        icons=["grid", "bank", "rocket-takeoff", "people", "heart-pulse"],
-        menu_icon="cast",
+        menu_title="Menú Principal",
+        options=["Dashboard", "🧠 Inteligencia Doc", "🏛️ Alcaldía", "🚀 Numbra", "💎 Sueños"],
+        icons=["grid", "file-earmark-text", "bank", "rocket-takeoff", "gem"],
         default_index=0,
     )
     
     st.divider()
-    if st.button("🚨 ¡ESTOY ESTRESADA!"):
-        activar_zen()
-        st.rerun()
+    if st.button("🚨 PÁNICO / ZEN"): activar_zen()
+    st.rerun()
 
-# --- PÁGINA: DASHBOARD PRINCIPAL ---
-if selected == "Dashboard Principal":
+# --- LÓGICA PRINCIPAL ---
+if selected == "Dashboard":
     st.title("🧿 Centro de Comando")
-    st.markdown("Bienvenida a tu sistema, Norma.")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🏛️ Alcaldía", "2 Oficios", "Pendientes")
-    col2.metric("🚀 Numbra", "Sprint 4", "En curso")
-    col3.metric("🤝 PMO Hub", "Evento", "Logística")
-    col4.metric("🧘‍♀️ Energía", "ALTA", "Nivel de Calma")
+    col1.metric("Pendientes", "2", "Urgentes")
+    col2.metric("Numbra", "Fase 2", "En Proceso")
+    col3.metric("Docs Leídos", "0", "Hoy")
+    col4.metric("Energía", "⚡️ Alta", "Estable")
     
-    st.subheader("🐶 Arya (Asistente Virtual)")
-    prompt = st.chat_input("Dile a Arya qué necesitas organizar hoy...")
-    if prompt:
-        st.success(f"✅ Arya anotó: '{prompt}'. Procesando para Norma...")
+    st.info("💡 Tip de Arya: Tienes pendiente revisar el contrato de Numbra.")
 
-# --- PÁGINA: VIDA Y SUEÑOS ---
-elif selected == "🧘‍♀️ Vida & Sueños":
-    st.title("💎 Mapa de Sueños de Norma")
+elif selected == "🧠 Inteligencia Doc":
+    st.title("🧠 Analizador de Documentos")
+    st.markdown("Sube un PDF (Contrato, Decreto, Informe) y Arya buscará palabras clave.")
     
-    tab1, tab2, tab3 = st.tabs(["🎓 Profesionales", "🚗 Materiales", "🧘‍♀️ Espirituales"])
+    uploaded_file = st.file_uploader("Arrastra tu PDF aquí", type="pdf")
     
-    with tab1:
-        st.subheader("Objetivos Profesionales")
-        st.markdown('<div class="dream-card"><h3>🇬🇧 Bilingüismo C2</h3><p>Meta: Hablar fluido.</p></div>', unsafe_allow_html=True)
-        st.checkbox("¿Practiqué 15 min hoy?", key="english")
+    if uploaded_file is not None:
+        # Leer el PDF
+        reader = PyPDF2.PdfReader(uploaded_file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+            
+        st.success(f"✅ Documento procesado: {len(reader.pages)} páginas leídas.")
         
-    with tab2:
-        st.subheader("Objetivos Materiales")
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown('<div class="dream-card"><h3>🚗 Mi Carro</h3></div>', unsafe_allow_html=True)
-            st.progress(30)
-        with col_b:
-            st.metric("Viajes 2026", "0/4", "¡A planear!")
+        # Buscador
+        search = st.text_input("🔍 ¿Qué buscas en este documento? (Ej: 'presupuesto', 'plazo', 'error')")
+        
+        if search:
+            count = text.lower().count(search.lower())
+            if count > 0:
+                st.markdown(f"### 🚨 ¡Encontrado!")
+                st.write(f"La palabra **'{search}'** aparece **{count} veces** en el documento.")
+            else:
+                st.warning(f"No encontré la palabra '{search}' en este archivo.")
+                
+        with st.expander("Ver texto completo del documento"):
+            st.write(text)
 
-    with tab3:
-        st.subheader("Zona de Calma")
-        st.info("Si sientes que el estrés sube, usa el botón de pánico en la barra lateral.")
-        if st.button("Activar Modo Zen Ahora 🌿"):
-            activar_zen()
-            st.rerun()
+elif selected == "💎 Sueños":
+    st.title("💎 Mapa de Sueños")
+    st.write("Aquí van tus metas de Inglés, Carro y Viajes...")
+    st.progress(30)
