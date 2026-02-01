@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
-import PyPDF2  # La herramienta para leer PDFs
+import PyPDF2
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Norma LifeOS", page_icon="🧿", layout="wide")
@@ -18,12 +18,9 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     div.stMetric label { color: #64748b !important; }
-    
-    /* Estilo para el área de carga de archivos */
     .stFileUploader {
         padding: 20px; border: 2px dashed #6366F1; border-radius: 10px; background-color: #EEF2FF;
     }
-    
     .zen-mode { text-align: center; padding: 50px; background-color: #E0F2F1; border-radius: 20px; }
     .zen-mode h1 { color: #2e7d32 !important; }
 </style>
@@ -55,12 +52,14 @@ with st.sidebar:
         menu_title="Menú Principal",
         options=["Dashboard", "🧠 Inteligencia Doc", "🏛️ Alcaldía", "🚀 Numbra", "💎 Sueños"],
         icons=["grid", "file-earmark-text", "bank", "rocket-takeoff", "gem"],
-        default_index=0,
+        default_index=1,  # Hice que arranque directo en Inteligencia
     )
     
     st.divider()
-    if st.button("🚨 PÁNICO / ZEN"): activar_zen()
-    st.rerun()
+    # CORRECCIÓN AQUÍ: El rerun solo ocurre si se presiona el botón
+    if st.button("🚨 PÁNICO / ZEN"): 
+        activar_zen()
+        st.rerun()
 
 # --- LÓGICA PRINCIPAL ---
 if selected == "Dashboard":
@@ -70,17 +69,16 @@ if selected == "Dashboard":
     col2.metric("Numbra", "Fase 2", "En Proceso")
     col3.metric("Docs Leídos", "0", "Hoy")
     col4.metric("Energía", "⚡️ Alta", "Estable")
-    
     st.info("💡 Tip de Arya: Tienes pendiente revisar el contrato de Numbra.")
 
 elif selected == "🧠 Inteligencia Doc":
     st.title("🧠 Analizador de Documentos")
-    st.markdown("Sube un PDF (Contrato, Decreto, Informe) y Arya buscará palabras clave.")
+    st.markdown("### Sube tu documento abajo 👇")
+    st.markdown("Arya leerá el contenido y buscará lo que necesites.")
     
     uploaded_file = st.file_uploader("Arrastra tu PDF aquí", type="pdf")
     
     if uploaded_file is not None:
-        # Leer el PDF
         reader = PyPDF2.PdfReader(uploaded_file)
         text = ""
         for page in reader.pages:
@@ -88,21 +86,18 @@ elif selected == "🧠 Inteligencia Doc":
             
         st.success(f"✅ Documento procesado: {len(reader.pages)} páginas leídas.")
         
-        # Buscador
-        search = st.text_input("🔍 ¿Qué buscas en este documento? (Ej: 'presupuesto', 'plazo', 'error')")
-        
+        search = st.text_input("🔍 ¿Qué buscas? (Ej: 'presupuesto', 'plazo')")
         if search:
             count = text.lower().count(search.lower())
             if count > 0:
                 st.markdown(f"### 🚨 ¡Encontrado!")
-                st.write(f"La palabra **'{search}'** aparece **{count} veces** en el documento.")
+                st.write(f"La palabra **'{search}'** aparece **{count} veces**.")
             else:
-                st.warning(f"No encontré la palabra '{search}' en este archivo.")
-                
-        with st.expander("Ver texto completo del documento"):
+                st.warning(f"No encontré la palabra '{search}'.")
+        
+        with st.expander("Ver texto completo"):
             st.write(text)
 
 elif selected == "💎 Sueños":
     st.title("💎 Mapa de Sueños")
-    st.write("Aquí van tus metas de Inglés, Carro y Viajes...")
-    st.progress(30)
+    st.write("Aquí van tus metas...")
