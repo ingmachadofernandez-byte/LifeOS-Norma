@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import plotly.graph_objects as go
 import PyPDF2
+import pandas as pd # Necesitamos esto para las tablas bonitas
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Norma LifeOS", page_icon="🧿", layout="wide")
@@ -17,31 +18,9 @@ st.markdown("""
         padding: 15px; border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    div.stMetric label { color: #64748b !important; }
-    .stFileUploader {
-        padding: 20px; border: 2px dashed #6366F1; border-radius: 10px; background-color: #EEF2FF;
-    }
-    .zen-mode { text-align: center; padding: 50px; background-color: #E0F2F1; border-radius: 20px; }
-    .zen-mode h1 { color: #2e7d32 !important; }
+    .stDataFrame { border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
-
-# --- MODO ZEN ---
-if 'zen_mode' not in st.session_state: st.session_state['zen_mode'] = False
-def activar_zen(): st.session_state['zen_mode'] = True
-def desactivar_zen(): st.session_state['zen_mode'] = False
-
-if st.session_state['zen_mode']:
-    st.markdown('<div class="zen-mode">', unsafe_allow_html=True)
-    st.title("🌿 Espacio de Calma")
-    st.image("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80")
-    st.write("Inhala (4)... Retén (7)... Exhala (8)...")
-    st.divider()
-    if st.button("🔙 Volver al LifeOS"):
-        desactivar_zen()
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.stop()
 
 # --- BARRA LATERAL ---
 with st.sidebar:
@@ -50,54 +29,100 @@ with st.sidebar:
     
     selected = option_menu(
         menu_title="Menú Principal",
-        options=["Dashboard", "🧠 Inteligencia Doc", "🏛️ Alcaldía", "🚀 Numbra", "💎 Sueños"],
-        icons=["grid", "file-earmark-text", "bank", "rocket-takeoff", "gem"],
-        default_index=1,  # Hice que arranque directo en Inteligencia
+        # ¡Agregamos MIRA a la lista! 💙
+        options=["Dashboard", "💙 MIRA", "🧠 Inteligencia Doc", "🏛️ Alcaldía", "🚀 Numbra", "💎 Sueños"],
+        icons=["grid", "people-fill", "file-earmark-text", "bank", "rocket-takeoff", "gem"],
+        default_index=1, 
     )
     
     st.divider()
-    # CORRECCIÓN AQUÍ: El rerun solo ocurre si se presiona el botón
-    if st.button("🚨 PÁNICO / ZEN"): 
-        activar_zen()
-        st.rerun()
+    st.info("Versión 3.0 - Módulo Político")
 
 # --- LÓGICA PRINCIPAL ---
 if selected == "Dashboard":
     st.title("🧿 Centro de Comando")
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Pendientes", "2", "Urgentes")
+    col1.metric("Pendientes MIRA", "3", "Activos")
     col2.metric("Numbra", "Fase 2", "En Proceso")
-    col3.metric("Docs Leídos", "0", "Hoy")
+    col3.metric("Docs Leídos", "1", "Hoy")
     col4.metric("Energía", "⚡️ Alta", "Estable")
-    st.info("💡 Tip de Arya: Tienes pendiente revisar el contrato de Numbra.")
+
+elif selected == "💙 MIRA":
+    st.title("💙 Gestión Política - MIRA")
+    st.markdown("Control de actividades y compromiso social.")
+
+    # 1. VISIÓN GENERAL (Métricas arriba)
+    # Inicializamos las tareas si no existen en la memoria temporal
+    if 'mira_data' not in st.session_state:
+        st.session_state['mira_data'] = [
+            {"Actividad": "Reunión de Líderes", "Responsable": "Norma", "Estado": "Pendiente", "Avance": 0},
+            {"Actividad": "Visita Comuna 12", "Responsable": "Equipo", "Estado": "En Proceso", "Avance": 50},
+            {"Actividad": "Capacitación Electoral", "Responsable": "Norma", "Estado": "Listo", "Avance": 100},
+        ]
+
+    # Convertimos la lista en una tabla (DataFrame)
+    df = pd.DataFrame(st.session_state['mira_data'])
+
+    # Editor de Datos (Aquí es donde ocurre la magia)
+    st.subheader("📋 Lista de Tareas y Compromisos")
+    edited_df = st.data_editor(
+        df,
+        num_rows="dynamic", # ¡Esto te permite agregar filas nuevas!
+        column_config={
+            "Avance": st.column_config.ProgressColumn(
+                "Progreso %",
+                help="¿Cuánto hemos avanzado?",
+                min_value=0,
+                max_value=100,
+                format="%d%%",
+            ),
+            "Estado": st.column_config.SelectboxColumn(
+                "Estado Actual",
+                options=["Pendiente", "En Proceso", "Bloqueado", "Listo"],
+                required=True,
+            )
+        },
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    # Cálculo de métricas automáticas
+    total_tareas = len(edited_df)
+    tareas_listas = len(edited_df[edited_df["Estado"] == "Listo"])
+    porcentaje_global = (tareas_listas / total_tareas) if total_tareas > 0 else 0
+
+    st.divider()
+    col1, col2 = st.columns([3, 1])
+    col1.write("### Progreso General del Partido")
+    col1.progress(porcentaje_global, text=f"Cumplimiento: {int(porcentaje_global*100)}%")
+    
+    col2.metric("Tareas Completadas", f"{tareas_listas}/{total_tareas}")
 
 elif selected == "🧠 Inteligencia Doc":
     st.title("🧠 Analizador de Documentos")
-    st.markdown("### Sube tu documento abajo 👇")
-    st.markdown("Arya leerá el contenido y buscará lo que necesites.")
-    
-    uploaded_file = st.file_uploader("Arrastra tu PDF aquí", type="pdf")
+    uploaded_file = st.file_uploader("Sube contratos o decretos (PDF)", type="pdf")
     
     if uploaded_file is not None:
         reader = PyPDF2.PdfReader(uploaded_file)
         text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-            
-        st.success(f"✅ Documento procesado: {len(reader.pages)} páginas leídas.")
+        for page in reader.pages: text += page.extract_text()
+        st.success(f"✅ Documento de {len(reader.pages)} páginas procesado.")
         
-        search = st.text_input("🔍 ¿Qué buscas? (Ej: 'presupuesto', 'plazo')")
+        search = st.text_input("🔍 Buscar en el documento:")
         if search:
             count = text.lower().count(search.lower())
-            if count > 0:
-                st.markdown(f"### 🚨 ¡Encontrado!")
-                st.write(f"La palabra **'{search}'** aparece **{count} veces**.")
-            else:
-                st.warning(f"No encontré la palabra '{search}'.")
-        
-        with st.expander("Ver texto completo"):
-            st.write(text)
+            if count > 0: st.info(f"Encontré la palabra '{search}' {count} veces.")
+            else: st.warning("No encontré esa palabra.")
+        with st.expander("Ver texto completo"): st.write(text)
+
+elif selected == "🏛️ Alcaldía":
+    st.title("🏛️ Alcaldía de Cali")
+    st.write("Próximamente: Tablero de control de Calidad...")
+
+elif selected == "🚀 Numbra":
+    st.title("🚀 Proyecto Numbra")
+    st.write("Próximamente: Calculadora financiera...")
 
 elif selected == "💎 Sueños":
     st.title("💎 Mapa de Sueños")
-    st.write("Aquí van tus metas...")
+    st.write("Inglés • Viajes • Carro")
