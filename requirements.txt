@@ -1,0 +1,6 @@
+streamlit
+plotly
+streamlit-option-menu
+watchdog
+PyPDF2
+pandas
