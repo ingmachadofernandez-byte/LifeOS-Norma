@@ -30,28 +30,25 @@ st.markdown("""
 # --- CONEXIÓN ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- MENÚ ---
+# --- MENÚ (AHORA CON NUMBRA 🚀) ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4140/4140048.png", width=100)
     st.write("### Hola, Norma 👋")
     selected = option_menu(
         menu_title=None,
-        options=["Dashboard", "💰 Finanzas", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
-        icons=["grid", "cash-coin", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book"],
+        options=["Dashboard", "💰 Finanzas", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio", "🚀 Numbra"],
+        icons=["grid", "cash-coin", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book", "rocket-takeoff"],
         default_index=0,
     )
 
-# --- FUNCIONES MAESTRAS (CON LIMPIEZA DE DATOS) ---
+# --- FUNCIONES MAESTRAS (CON LIMPIEZA) ---
 def cargar_datos(hoja, columnas=5):
     try:
         df = conn.read(worksheet=hoja, usecols=list(range(columnas)), ttl=0)
-        # LIMPIEZA DE FINANZAS PARA EVITAR ERRORES
+        # LIMPIEZA DE FINANZAS
         if hoja == "FINANZAS" and not df.empty:
-            # Asegurar que Fecha sea fecha
             df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
-            # Asegurar que Pagado sea Verdadero/Falso (Check)
             df['Pagado'] = df['Pagado'].astype(str).map({'TRUE': True, 'FALSE': False, 'True': True, 'False': False, '1': True, '0': False}).fillna(False)
-            # Asegurar que Monto sea número
             df['Monto'] = pd.to_numeric(df['Monto'], errors='coerce').fillna(0)
         return df
     except Exception as e:
@@ -77,12 +74,10 @@ if selected == "Dashboard":
     df_h = cargar_datos("HABITOS", 6)
     hecho = False
     if not df_h.empty:
-        # Convertimos fecha a string para comparar
         reg = df_h[df_h['Fecha'].astype(str) == str(hoy)]
         if not reg.empty and reg.iloc[0]['Min_Ingles'] > 0: hecho = True
     if not hecho: st.markdown('<div class="alerta-roja">🚨 ¡Recuerda tu Inglés hoy! 🇬🇧</div>', unsafe_allow_html=True)
 
-    # Métricas Resumen
     c1, c2, c3 = st.columns(3)
     df_fin = cargar_datos("FINANZAS", 5)
     saldo = 0
@@ -93,43 +88,32 @@ if selected == "Dashboard":
     
     c1.metric("🏋️‍♀️ Gym", rutina.get(hoy_es, "Descanso"))
     c2.metric("💰 Disponible", f"${saldo:,.0f}")
-    c3.metric("🏛️ Alcaldía", "Activa")
+    c3.metric("🚀 Numbra", "Fase 1")
 
-# --- 2. FINANZAS (RECUPERADO + GRÁFICOS) ---
+# --- 2. FINANZAS ---
 elif selected == "💰 Finanzas":
     st.title("💰 Tablero Financiero")
-    
     df_fin = cargar_datos("FINANZAS", 5)
     
     if not df_fin.empty:
-        # 1. MÉTRICAS GRANDES
         ing = df_fin[df_fin['Tipo']=='Ingreso']['Monto'].sum()
         gas = df_fin[df_fin['Tipo']=='Gasto']['Monto'].sum()
-        disp = ing - gas
-        
         k1, k2, k3 = st.columns(3)
         k1.metric("Ingresos", f"${ing:,.0f}")
         k2.metric("Gastos", f"${gas:,.0f}", delta_color="inverse")
-        k3.metric("Disponible Real", f"${disp:,.0f}")
-        
+        k3.metric("Disponible", f"${(ing-gas):,.0f}")
         st.divider()
 
-        # 2. GRÁFICOS (VISUALES)
         c_chart1, c_chart2 = st.columns(2)
-        
-        # Gráfico de Torta (Gastos por Concepto)
         gastos_df = df_fin[df_fin['Tipo'] == 'Gasto']
         if not gastos_df.empty:
-            fig1 = px.pie(gastos_df, values='Monto', names='Concepto', title='¿En qué se va el dinero?', hole=0.4)
+            fig1 = px.pie(gastos_df, values='Monto', names='Concepto', title='Gastos por Concepto', hole=0.4)
             c_chart1.plotly_chart(fig1, use_container_width=True)
-        
-        # Gráfico de Barras (Ingresos vs Gastos)
         resumen = df_fin.groupby('Tipo')['Monto'].sum().reset_index()
-        fig2 = px.bar(resumen, x='Tipo', y='Monto', color='Tipo', title='Balance General', color_discrete_map={'Ingreso':'#4ADE80', 'Gasto':'#F87171'})
+        fig2 = px.bar(resumen, x='Tipo', y='Monto', color='Tipo', title='Balance', color_discrete_map={'Ingreso':'#4ADE80', 'Gasto':'#F87171'})
         c_chart2.plotly_chart(fig2, use_container_width=True)
 
-    # 3. REGISTRO Y TABLA (CORREGIDA)
-    with st.expander("➕ Registrar Movimiento", expanded=True):
+    with st.expander("➕ Registrar", expanded=True):
         with st.form("fin"):
             c1, c2, c3, c4 = st.columns(4)
             tipo = c1.selectbox("Tipo", ["Gasto", "Ingreso"])
@@ -137,32 +121,25 @@ elif selected == "💰 Finanzas":
             monto = c3.number_input("Monto", step=1000)
             conc = c4.text_input("Concepto")
             pagado = st.checkbox("Pagado", value=True)
-            
             if st.form_submit_button("Guardar"):
-                # Convertimos bool a TRUE/FALSE string para Google Sheets
-                n = pd.DataFrame([{
-                    "Fecha": fecha, 
-                    "Concepto": conc, 
-                    "Monto": monto, 
-                    "Tipo": tipo, 
-                    "Pagado": pagado
-                }])
+                n = pd.DataFrame([{"Fecha": fecha, "Concepto": conc, "Monto": monto, "Tipo": tipo, "Pagado": pagado}])
                 guardar_datos("FINANZAS", pd.concat([df_fin, n], ignore_index=True))
 
-    st.subheader("📝 Historial")
     if not df_fin.empty:
-        st.data_editor(
-            df_fin,
-            num_rows="dynamic",
-            use_container_width=True,
-            column_config={
-                "Fecha": st.column_config.DateColumn("Fecha", format="YYYY-MM-DD"),
-                "Monto": st.column_config.NumberColumn("Monto", format="$%d"),
-                "Pagado": st.column_config.CheckboxColumn("Pagado")
-            }
-        )
+        st.data_editor(df_fin, num_rows="dynamic", use_container_width=True, column_config={"Fecha": st.column_config.DateColumn("Fecha"), "Monto": st.column_config.NumberColumn("Monto", format="$%d"), "Pagado": st.column_config.CheckboxColumn("Pagado")})
 
-# --- 3. ALCALDÍA ---
+# --- 3. NUMBRA (¡AQUÍ ESTÁ!) ---
+elif selected == "🚀 Numbra":
+    st.title("🚀 Proyecto Numbra")
+    st.info("🚧 Espacio reservado para tu próximo gran proyecto.")
+    st.markdown("""
+    Aquí podrás llevar el control de:
+    * 📅 Cronograma del proyecto
+    * 💰 Presupuesto de inversión
+    * 🤝 Contactos clave
+    """)
+
+# --- RESTO DE MÓDULOS ---
 elif selected == "🏛️ Alcaldía":
     st.title("🏛️ Alcaldía")
     with st.form("alc"):
@@ -174,7 +151,6 @@ elif selected == "🏛️ Alcaldía":
             guardar_datos("ALCALDIA", pd.concat([cargar_datos("ALCALDIA", 4), n], ignore_index=True))
     st.data_editor(cargar_datos("ALCALDIA", 4), use_container_width=True, column_config={"Fecha": st.column_config.DateColumn("Fecha")})
 
-# --- 4. BIENESTAR ---
 elif selected == "💪 Bienestar":
     st.title("💪 Salud")
     with st.form("hab"):
@@ -183,37 +159,4 @@ elif selected == "💪 Bienestar":
         gym = c2.selectbox("Gym", ["Pierna", "Brazo", "Cardio", "Descanso"])
         ing = c3.number_input("Min. Inglés", step=15)
         if st.form_submit_button("Guardar"):
-            n = pd.DataFrame([{"Fecha": f, "Enfoque_Gym": gym, "Min_Lectura": 0, "Min_Biblia": 0, "Min_Ingles": ing, "Agua_Litros": 1.5}])
-            guardar_datos("HABITOS", pd.concat([cargar_datos("HABITOS", 6), n], ignore_index=True))
-    st.dataframe(cargar_datos("HABITOS", 6), use_container_width=True)
-
-# --- (RESTO DE MÓDULOS) ---
-elif selected == "✨ Sueños":
-    st.title("✨ Sueños")
-    df = cargar_datos("SUENOS", 4)
-    if not df.empty:
-        ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
-        if st.button("Guardar"): guardar_datos("SUENOS", ed)
-
-elif selected == "📝 Notas":
-    st.title("📝 Notas")
-    with st.form("nt"):
-        t = st.text_input("Nota")
-        if st.form_submit_button("Guardar"):
-            n = pd.DataFrame([{"Fecha": date.today(), "Categoria": "General", "Titulo": t, "Contenido": "-", "Importante": False}])
-            guardar_datos("NOTAS", pd.concat([cargar_datos("NOTAS", 5), n], ignore_index=True))
-    st.data_editor(cargar_datos("NOTAS", 5), use_container_width=True)
-
-elif selected == "💙 MIRA":
-    st.title("💙 MIRA")
-    df = cargar_datos("MIRA", 4)
-    if not df.empty:
-        ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
-        if st.button("Guardar"): guardar_datos("MIRA", ed)
-
-elif selected == "🧠 Estudio":
-    st.title("🧠 Estudio")
-    df = cargar_datos("PLAN_INGLES", 4)
-    if not df.empty:
-        ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
-        if st.button("Actualizar"): guardar_datos("PLAN_INGLES", ed)
+            n = pd.DataFrame([{"Fecha": f
