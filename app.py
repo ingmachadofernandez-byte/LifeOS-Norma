@@ -30,18 +30,18 @@ st.markdown("""
 # --- CONEXIÓN ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- MENÚ (AHORA CON NUMBRA 🚀) ---
+# --- MENÚ (CON NUMBRA INCLUIDO) ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4140/4140048.png", width=100)
     st.write("### Hola, Norma 👋")
     selected = option_menu(
         menu_title=None,
-        options=["Dashboard", "💰 Finanzas", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio", "🚀 Numbra"],
-        icons=["grid", "cash-coin", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book", "rocket-takeoff"],
+        options=["Dashboard", "💰 Finanzas", "🚀 Numbra", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
+        icons=["grid", "cash-coin", "rocket-takeoff", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book"],
         default_index=0,
     )
 
-# --- FUNCIONES MAESTRAS (CON LIMPIEZA) ---
+# --- FUNCIONES MAESTRAS ---
 def cargar_datos(hoja, columnas=5):
     try:
         df = conn.read(worksheet=hoja, usecols=list(range(columnas)), ttl=0)
@@ -107,13 +107,14 @@ elif selected == "💰 Finanzas":
         c_chart1, c_chart2 = st.columns(2)
         gastos_df = df_fin[df_fin['Tipo'] == 'Gasto']
         if not gastos_df.empty:
-            fig1 = px.pie(gastos_df, values='Monto', names='Concepto', title='Gastos por Concepto', hole=0.4)
+            fig1 = px.pie(gastos_df, values='Monto', names='Concepto', title='Gastos', hole=0.4)
             c_chart1.plotly_chart(fig1, use_container_width=True)
+        
         resumen = df_fin.groupby('Tipo')['Monto'].sum().reset_index()
         fig2 = px.bar(resumen, x='Tipo', y='Monto', color='Tipo', title='Balance', color_discrete_map={'Ingreso':'#4ADE80', 'Gasto':'#F87171'})
         c_chart2.plotly_chart(fig2, use_container_width=True)
 
-    with st.expander("➕ Registrar", expanded=True):
+    with st.expander("➕ Registrar Movimiento", expanded=True):
         with st.form("fin"):
             c1, c2, c3, c4 = st.columns(4)
             tipo = c1.selectbox("Tipo", ["Gasto", "Ingreso"])
@@ -128,18 +129,13 @@ elif selected == "💰 Finanzas":
     if not df_fin.empty:
         st.data_editor(df_fin, num_rows="dynamic", use_container_width=True, column_config={"Fecha": st.column_config.DateColumn("Fecha"), "Monto": st.column_config.NumberColumn("Monto", format="$%d"), "Pagado": st.column_config.CheckboxColumn("Pagado")})
 
-# --- 3. NUMBRA (¡AQUÍ ESTÁ!) ---
+# --- 3. NUMBRA ---
 elif selected == "🚀 Numbra":
     st.title("🚀 Proyecto Numbra")
-    st.info("🚧 Espacio reservado para tu próximo gran proyecto.")
-    st.markdown("""
-    Aquí podrás llevar el control de:
-    * 📅 Cronograma del proyecto
-    * 💰 Presupuesto de inversión
-    * 🤝 Contactos clave
-    """)
+    st.info("🚧 Área de Proyecto")
+    st.markdown("### 📊 Estado del Proyecto\nAquí podrás gestionar cronogramas y presupuestos.")
 
-# --- RESTO DE MÓDULOS ---
+# --- 4. ALCALDÍA ---
 elif selected == "🏛️ Alcaldía":
     st.title("🏛️ Alcaldía")
     with st.form("alc"):
@@ -151,6 +147,7 @@ elif selected == "🏛️ Alcaldía":
             guardar_datos("ALCALDIA", pd.concat([cargar_datos("ALCALDIA", 4), n], ignore_index=True))
     st.data_editor(cargar_datos("ALCALDIA", 4), use_container_width=True, column_config={"Fecha": st.column_config.DateColumn("Fecha")})
 
+# --- 5. BIENESTAR ---
 elif selected == "💪 Bienestar":
     st.title("💪 Salud")
     with st.form("hab"):
@@ -159,4 +156,40 @@ elif selected == "💪 Bienestar":
         gym = c2.selectbox("Gym", ["Pierna", "Brazo", "Cardio", "Descanso"])
         ing = c3.number_input("Min. Inglés", step=15)
         if st.form_submit_button("Guardar"):
-            n = pd.DataFrame([{"Fecha": f
+            n = pd.DataFrame([{"Fecha": f, "Enfoque_Gym": gym, "Min_Lectura": 0, "Min_Biblia": 0, "Min_Ingles": ing, "Agua_Litros": 1.5}])
+            guardar_datos("HABITOS", pd.concat([cargar_datos("HABITOS", 6), n], ignore_index=True))
+    st.dataframe(cargar_datos("HABITOS", 6), use_container_width=True)
+
+# --- 6. SUEÑOS ---
+elif selected == "✨ Sueños":
+    st.title("✨ Sueños")
+    df = cargar_datos("SUENOS", 4)
+    if not df.empty:
+        ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+        if st.button("Guardar"): guardar_datos("SUENOS", ed)
+
+# --- 7. NOTAS ---
+elif selected == "📝 Notas":
+    st.title("📝 Notas")
+    with st.form("nt"):
+        t = st.text_input("Nota")
+        if st.form_submit_button("Guardar"):
+            n = pd.DataFrame([{"Fecha": date.today(), "Categoria": "General", "Titulo": t, "Contenido": "-", "Importante": False}])
+            guardar_datos("NOTAS", pd.concat([cargar_datos("NOTAS", 5), n], ignore_index=True))
+    st.data_editor(cargar_datos("NOTAS", 5), use_container_width=True)
+
+# --- 8. MIRA ---
+elif selected == "💙 MIRA":
+    st.title("💙 MIRA")
+    df = cargar_datos("MIRA", 4)
+    if not df.empty:
+        ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+        if st.button("Guardar"): guardar_datos("MIRA", ed)
+
+# --- 9. ESTUDIO ---
+elif selected == "🧠 Estudio":
+    st.title("🧠 Estudio")
+    df = cargar_datos("PLAN_INGLES", 4)
+    if not df.empty:
+        ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+        if st.button("Actualizar"): guardar_datos("PLAN_INGLES", ed)
