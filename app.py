@@ -36,7 +36,7 @@ with st.sidebar:
     st.write("### Hola, Norma 👋")
     selected = option_menu(
         menu_title=None,
-        options=["Dashboard", "💰 Finanzas", "🚀 Numbra", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
+        options=["Dashboard", "💰 Finanzas", "🚀 Numbra", " PMO HUB ", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
         icons=["grid", "cash-coin", "rocket-takeoff", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book"],
         default_index=0,
     )
@@ -251,3 +251,77 @@ elif selected == "🧠 Estudio":
     if not df.empty:
         ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
         if st.button("Actualizar"): guardar_datos("PLAN_INGLES", ed)
+
+        # --- 🏆 PMO HUB (NUEVO MÓDULO) ---
+elif selected == "🏆 PMO Hub":
+    st.title("🏆 PMO Hub LATAM")
+    st.markdown("##### **Proyecto:** Reconocimiento Voluntarios y Miembros | **Feb - Dic 2025**")
+    
+    # Pestañas del Módulo
+    tab1, tab2, tab3 = st.tabs(["📊 Tablero", "👥 Equipo Voluntarios", "📅 Roadmap 2025"])
+
+    # --- Pestaña 1: Tablero ---
+    with tab1:
+        # Cargamos datos para las métricas
+        df_vol = cargar_datos("PMO_VOLUNTARIOS", 4)
+        
+        c1, c2, c3 = st.columns(3)
+        total_vol = len(df_vol) if not df_vol.empty else 0
+        activos = len(df_vol[df_vol['Estado'] == 'Activo']) if not df_vol.empty else 0
+        
+        c1.metric("Total Voluntarios", total_vol)
+        c2.metric("Activos Ahora", activos)
+        c3.metric("Próximo Hito", "Marzo (Convocatoria)")
+        
+        st.divider()
+        st.info("🤖 **Arya PMO:** Hola Norma. Recuerda que en Febrero estamos definiendo las categorías de reconocimiento.")
+
+    # --- Pestaña 2: Gestión de Voluntarios ---
+    with tab2:
+        st.subheader("Base de Datos del Equipo")
+        
+        # Formulario para agregar nuevo voluntario
+        with st.expander("➕ Agregar Nuevo Voluntario"):
+            with st.form("nuevo_voluntario"):
+                col_a, col_b = st.columns(2)
+                nombre = col_a.text_input("Nombre Completo")
+                rol = col_b.selectbox("Rol", ["Logística", "Comunicaciones", "Jurado", "Patrocinio", "General"])
+                col_c, col_d = st.columns(2)
+                estado = col_c.selectbox("Estado", ["Activo", "Pendiente", "Inactivo"])
+                puntos = col_d.number_input("Puntos Iniciales", value=0)
+                
+                if st.form_submit_button("Guardar Voluntario"):
+                    nuevo_v = pd.DataFrame([{"Nombre": nombre, "Rol": rol, "Estado": estado, "Puntos": puntos}])
+                    # Si no existe df_vol, lo crea
+                    df_actual = cargar_datos("PMO_VOLUNTARIOS", 4)
+                    guardar_datos("PMO_VOLUNTARIOS", pd.concat([df_actual, nuevo_v], ignore_index=True))
+
+        # Mostrar y Editar la Tabla
+        df_vol = cargar_datos("PMO_VOLUNTARIOS", 4)
+        if not df_vol.empty:
+            edited_vol = st.data_editor(
+                df_vol, 
+                num_rows="dynamic", 
+                use_container_width=True,
+                column_config={
+                    "Estado": st.column_config.SelectboxColumn("Estado", options=["Activo", "Pendiente", "Inactivo"]),
+                    "Puntos": st.column_config.ProgressColumn("Puntos", min_value=0, max_value=200, format="%d pts")
+                }
+            )
+            if st.button("💾 Actualizar Equipo"):
+                guardar_datos("PMO_VOLUNTARIOS", edited_vol)
+        else:
+            st.warning("Aún no tienes voluntarios registrados. ¡Agrega el primero arriba!")
+
+    # --- Pestaña 3: Roadmap (Cronograma) ---
+    with tab3:
+        st.subheader("📍 Línea de Tiempo del Proyecto")
+        # Esto es visual, no necesita base de datos por ahora
+        timeline_data = [
+            {"Mes": "Febrero", "Actividad": "Kick-off y Definición Categorías", "Estado": "✅ Listo"},
+            {"Mes": "Marzo", "Actividad": "Convocatoria de Postulados", "Estado": "🔄 En Curso"},
+            {"Mes": "Junio", "Actividad": "Primer Corte Evaluación", "Estado": "⏳ Pendiente"},
+            {"Mes": "Septiembre", "Actividad": "Gala Semestral", "Estado": "⏳ Pendiente"},
+            {"Mes": "Diciembre", "Actividad": "Cierre y Premiación Anual", "Estado": "⏳ Pendiente"},
+        ]
+        st.dataframe(pd.DataFrame(timeline_data), use_container_width=True)
