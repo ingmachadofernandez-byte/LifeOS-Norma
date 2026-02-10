@@ -30,45 +30,45 @@ st.markdown("""
 # --- 3. CONEXIÓN ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 4. MENÚ ---
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4140/4140048.png", width=100)
-    st.write("### Hola, Norma 👋")
-    selected = option_menu(
-        menu_title=None,
-        options=options=["Dashboard", "💰 Finanzas", "🚀 Numbra", "🏆 PMO Hub", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
-        icons=["grid", "cash-coin", "rocket-takeoff", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book"],
-        default_index=0,
-    )
-
-# --- 5. FUNCIONES MAESTRAS (AQUÍ ESTÁ EL ARREGLO) ---
+# --- 4. FUNCIONES MAESTRAS ---
 def cargar_datos(hoja, columnas=5):
     try:
         df = conn.read(worksheet=hoja, usecols=list(range(columnas)), ttl=0)
-        
-        # LIMPIEZA FINANZAS
-        if hoja == "FINANZAS" and not df.empty:
+        # Limpieza General de Fechas
+        if 'Fecha' in df.columns:
             df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+        
+        # Limpieza Específica Finanzas
+        if hoja == "FINANZAS" and not df.empty:
             df['Monto'] = pd.to_numeric(df['Monto'], errors='coerce').fillna(0)
             df['Pagado'] = df['Pagado'].astype(str).map({'TRUE': True, 'FALSE': False, 'True': True, 'False': False, '1': True, '0': False}).fillna(False)
-        
-        # LIMPIEZA ALCALDÍA (¡ESTO ARREGLA EL ERROR ROJO!) 🚨
-        if hoja == "ALCALDIA" and not df.empty:
-            df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
             
         return df
-    except:
+    except Exception:
+        # Si falla (ej: hoja vacía o no existe), devolvemos DataFrame vacío
         return pd.DataFrame()
 
 def guardar_datos(hoja, df):
     try:
         conn.update(worksheet=hoja, data=df)
-        st.success("✅ ¡Guardado!")
+        st.success("✅ ¡Guardado exitosamente!")
         st.rerun()
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error al guardar: {e}")
 
-# ================= MÓDULOS =================
+# --- 5. MENÚ LATERAL ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/4140/4140048.png", width=100)
+    st.write("### Hola, Norma 👋")
+    
+    selected = option_menu(
+        menu_title=None,
+        options=["Dashboard", "💰 Finanzas", "🚀 Numbra", "🏆 PMO Hub", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
+        icons=["grid", "cash-coin", "rocket-takeoff", "trophy", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book"],
+        default_index=0,
+    )
+
+# ================= MÓDULOS DEL SISTEMA =================
 
 # --- DASHBOARD ---
 if selected == "Dashboard":
@@ -82,7 +82,7 @@ if selected == "Dashboard":
     df_h = cargar_datos("HABITOS", 6)
     hecho = False
     if not df_h.empty:
-        reg = df_h[df_h['Fecha'].astype(str) == str(hoy)]
+        reg = df_h[df_h['Fecha'].dt.date == hoy]
         if not reg.empty and reg.iloc[0]['Min_Ingles'] > 0: hecho = True
     if not hecho: st.markdown('<div class="alerta-roja">🚨 ¡Alerta! Inglés pendiente 🇬🇧</div>', unsafe_allow_html=True)
 
@@ -104,7 +104,6 @@ if selected == "Dashboard":
 # --- 🚀 NUMBRA (GESTOR DE TAREAS) ---
 elif selected == "🚀 Numbra":
     st.title("🚀 Gestor de Proyectos Numbra")
-    
     df_numbra = cargar_datos("NUMBRA_TAREAS", 5)
     
     # KANBAN
@@ -113,7 +112,6 @@ elif selected == "🚀 Numbra":
         pendientes = df_numbra[df_numbra['Estado'] == 'Pendiente']
         arya = df_numbra[df_numbra['Estado'] == 'Arya Trabajando']
         listo = df_numbra[df_numbra['Estado'] == 'Listo']
-        
         col1.warning(f"📌 Pendientes ({len(pendientes)})")
         col2.info(f"🤖 Arya Trabajando ({len(arya)})")
         col3.success(f"✅ Listas ({len(listo)})")
@@ -121,23 +119,18 @@ elif selected == "🚀 Numbra":
 
     # GESTIÓN
     tab1, tab2 = st.tabs(["📋 Lista de Tareas", "➕ Nueva Tarea"])
-    
     with tab1:
         if not df_numbra.empty:
             edited_numbra = st.data_editor(
-                df_numbra,
-                num_rows="dynamic",
-                use_container_width=True,
+                df_numbra, num_rows="dynamic", use_container_width=True,
                 column_config={
                     "Prioridad": st.column_config.SelectboxColumn("Prioridad", options=["Alta 🔥", "Media", "Baja"]),
                     "Estado": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "En Proceso", "Arya Trabajando", "Listo"]),
                     "Solicitud_Arya": st.column_config.TextColumn("Instrucción para Arya", width="large")
                 }
             )
-            if st.button("💾 Actualizar Numbra"):
-                guardar_datos("NUMBRA_TAREAS", edited_numbra)
-        else:
-            st.info("No hay tareas aún. Crea la primera en la otra pestaña.")
+            if st.button("💾 Actualizar Numbra"): guardar_datos("NUMBRA_TAREAS", edited_numbra)
+        else: st.info("No hay tareas aún.")
 
     with tab2:
         with st.form("numbra_form"):
@@ -145,16 +138,128 @@ elif selected == "🚀 Numbra":
             n_tarea = c1.text_input("Nombre de la Tarea")
             n_prio = c2.selectbox("Prioridad", ["Alta 🔥", "Media", "Baja"])
             n_instruccion = st.text_area("¿Qué debe hacer Arya?", placeholder="Ej: Redactar correo...")
-            
             if st.form_submit_button("Crear Tarea"):
-                nuevo = pd.DataFrame([{
-                    "Fecha": str(date.today()),
-                    "Tarea": n_tarea,
-                    "Prioridad": n_prio,
-                    "Estado": "Pendiente",
-                    "Solicitud_Arya": n_instruccion
-                }])
+                nuevo = pd.DataFrame([{"Fecha": str(date.today()), "Tarea": n_tarea, "Prioridad": n_prio, "Estado": "Pendiente", "Solicitud_Arya": n_instruccion}])
                 guardar_datos("NUMBRA_TAREAS", pd.concat([df_numbra, nuevo], ignore_index=True))
+
+# --- 🏆 PMO HUB (NUEVO MÓDULO) ---
+elif selected == "🏆 PMO Hub":
+    st.title("🏆 PMO Hub LATAM")
+    st.markdown("##### **Proyecto:** Reconocimiento Voluntarios y Miembros | **Feb - Dic 2025**")
+    
+    tab1, tab2, tab3 = st.tabs(["📊 Tablero", "👥 Equipo Voluntarios", "📅 Roadmap"])
+
+    # PESTAÑA 1: DASHBOARD
+    with tab1:
+        # Carga segura de datos
+        df_vol = cargar_datos("PMO_VOLUNTARIOS", 4)
+        if df_vol.empty: df_vol = pd.DataFrame(columns=["Nombre", "Rol", "Estado", "Puntos"])
+
+        total = len(df_vol)
+        activos = len(df_vol[df_vol['Estado'] == 'Activo'])
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Voluntarios", total)
+        c2.metric("Activos Ahora", activos)
+        c3.metric("Próximo Hito", "Marzo (Convocatoria)")
+        
+        st.divider()
+        st.info("🤖 **Arya PMO:** Hola Norma. Recuerda que en Febrero estamos definiendo las categorías de reconocimiento.")
+
+    # PESTAÑA 2: GESTIÓN VOLUNTARIOS
+    with tab2:
+        st.subheader("👥 Base de Datos del Equipo")
+        
+        # Formulario
+        with st.expander("➕ Agregar Nuevo Voluntario"):
+            with st.form("nuevo_voluntario"):
+                col_a, col_b = st.columns(2)
+                nombre = col_a.text_input("Nombre Completo")
+                rol = col_b.selectbox("Rol", ["Logística", "Comunicaciones", "Jurado", "Patrocinio", "General"])
+                col_c, col_d = st.columns(2)
+                estado = col_c.selectbox("Estado", ["Activo", "Pendiente", "Inactivo"])
+                puntos = col_d.number_input("Puntos Iniciales", value=0)
+                
+                if st.form_submit_button("Guardar Voluntario"):
+                    nuevo_v = pd.DataFrame([{"Nombre": nombre, "Rol": rol, "Estado": estado, "Puntos": puntos}])
+                    df_actual = cargar_datos("PMO_VOLUNTARIOS", 4)
+                    if df_actual.empty: df_actual = pd.DataFrame(columns=["Nombre", "Rol", "Estado", "Puntos"])
+                    guardar_datos("PMO_VOLUNTARIOS", pd.concat([df_actual, nuevo_v], ignore_index=True))
+
+        # Tabla siempre visible
+        df_vol = cargar_datos("PMO_VOLUNTARIOS", 4)
+        if df_vol.empty: df_vol = pd.DataFrame(columns=["Nombre", "Rol", "Estado", "Puntos"])
+        
+        edited_vol = st.data_editor(
+            df_vol, num_rows="dynamic", use_container_width=True,
+            column_config={
+                "Estado": st.column_config.SelectboxColumn("Estado", options=["Activo", "Pendiente", "Inactivo"]),
+                "Puntos": st.column_config.ProgressColumn("Puntos", min_value=0, max_value=200, format="%d pts")
+            }, key="pmo_editor"
+        )
+        if st.button("💾 Actualizar Equipo"): guardar_datos("PMO_VOLUNTARIOS", edited_vol)
+
+    # PESTAÑA 3: ROADMAP
+    with tab3:
+        st.subheader("📍 Línea de Tiempo 2025")
+        st.dataframe(pd.DataFrame([
+            {"Mes": "Febrero", "Actividad": "Kick-off y Definición Categorías", "Estado": "✅ Listo"},
+            {"Mes": "Marzo", "Actividad": "Convocatoria de Postulados", "Estado": "🔄 En Curso"},
+            {"Mes": "Junio", "Actividad": "Primer Corte Evaluación", "Estado": "⏳ Pendiente"},
+            {"Mes": "Septiembre", "Actividad": "Gala Semestral", "Estado": "⏳ Pendiente"},
+            {"Mes": "Diciembre", "Actividad": "Cierre y Premiación Anual", "Estado": "⏳ Pendiente"}
+        ]), use_container_width=True)
+
+# --- 🏛️ ALCALDÍA (CON GENERADOR DE INFORMES) ---
+elif selected == "🏛️ Alcaldía":
+    st.title("🏛️ Gestión Contractual - Alcaldía")
+    tab1, tab2 = st.tabs(["📝 Bitácora Diaria", "📄 Generar Informe Mensual"])
+    
+    # PESTAÑA 1: BITÁCORA
+    with tab1:
+        st.info("Registra aquí lo que hiciste hoy.")
+        with st.form("alc_diario"):
+            c1, c2 = st.columns([1, 3])
+            fecha = c1.date_input("Fecha", date.today())
+            actividad = c2.text_area("Actividad", placeholder="Ej: Reunión con DATIC...")
+            obligacion = st.selectbox("Obligación", [
+                "1. Apoyar gestión técnica BOD", "2. Articular con organismos", 
+                "3. Informes de seguimiento", "4. Reuniones supervisor", "5. Otras conexas"
+            ])
+            if st.form_submit_button("Guardar Actividad"):
+                nuevo_reg = pd.DataFrame([{"Fecha": fecha, "Actividad": actividad, "Obligacion": obligacion, "Estado": "Realizado"}])
+                df_actual = cargar_datos("ALCALDIA", 4)
+                if df_actual.empty: df_actual = pd.DataFrame(columns=["Fecha", "Actividad", "Obligacion", "Estado"])
+                guardar_datos("ALCALDIA", pd.concat([df_actual, nuevo_reg], ignore_index=True))
+        
+        st.subheader("📋 Historial")
+        st.dataframe(cargar_datos("ALCALDIA", 4).tail(5), use_container_width=True)
+
+    # PESTAÑA 2: GENERADOR
+    with tab2:
+        st.header("📄 Generador de Cuenta de Cobro")
+        col_m, col_y = st.columns(2)
+        mes = col_m.selectbox("Mes", range(1, 13), index=date.today().month - 1)
+        anio = col_y.number_input("Año", value=2026)
+        
+        if st.button("✨ Generar Informe"):
+            df = cargar_datos("ALCALDIA", 4)
+            if not df.empty:
+                df['Fecha'] = pd.to_datetime(df['Fecha'])
+                df_mes = df[(df['Fecha'].dt.month == mes) & (df['Fecha'].dt.year == anio)]
+                
+                if df_mes.empty: st.warning("No hay actividades en este mes.")
+                else:
+                    st.success(f"¡{len(df_mes)} actividades encontradas!")
+                    texto = f"INFORME DE EJECUCIÓN - {mes}/{anio}\n\nEn cumplimiento del objeto contractual, presento las actividades:\n\n"
+                    for obli in sorted(df_mes['Obligacion'].unique()):
+                        texto += f"📌 {obli}:\n"
+                        for _, row in df_mes[df_mes['Obligacion'] == obli].iterrows():
+                            texto += f"   • ({row['Fecha'].strftime('%d/%m')}) {row['Actividad']}.\n"
+                        texto += "\n"
+                    texto += "Se anexa evidencia digital.\n\nAtentamente,\nNORMA [APELLIDO]\nContratista"
+                    st.text_area("Copia tu informe:", value=texto, height=400)
+            else: st.error("Hoja ALCALDIA vacía.")
 
 # --- FINANZAS ---
 elif selected == "💰 Finanzas":
@@ -199,24 +304,6 @@ elif selected == "💪 Bienestar":
                 guardar_datos("HABITOS", pd.concat([cargar_datos("HABITOS", 6), n], ignore_index=True))
     st.dataframe(cargar_datos("HABITOS", 6), use_container_width=True)
 
-# --- ALCALDÍA (¡AHORA SÍ FUNCIONA!) ---
-elif selected == "🏛️ Alcaldía":
-    st.title("🏛️ Alcaldía")
-    with st.form("alc"):
-        c1, c2 = st.columns([1,3])
-        f = c1.date_input("Fecha", date.today())
-        act = c2.text_input("Actividad")
-        if st.form_submit_button("Registrar"):
-            n = pd.DataFrame([{"Fecha": f, "Actividad": act, "Evidencia": "-", "Estado": "OK"}])
-            guardar_datos("ALCALDIA", pd.concat([cargar_datos("ALCALDIA", 4), n], ignore_index=True))
-    
-    # Aquí es donde estaba el error, ya está protegido por cargar_datos
-    st.data_editor(
-        cargar_datos("ALCALDIA", 4), 
-        use_container_width=True, 
-        column_config={"Fecha": st.column_config.DateColumn("Fecha")}
-    )
-
 # --- SUEÑOS ---
 elif selected == "✨ Sueños":
     st.title("✨ Sueños")
@@ -251,77 +338,3 @@ elif selected == "🧠 Estudio":
     if not df.empty:
         ed = st.data_editor(df, num_rows="dynamic", use_container_width=True)
         if st.button("Actualizar"): guardar_datos("PLAN_INGLES", ed)
-
-        # --- 🏆 PMO HUB (NUEVO MÓDULO) ---
-elif selected == "🏆 PMO Hub":
-    st.title("🏆 PMO Hub LATAM")
-    st.markdown("##### **Proyecto:** Reconocimiento Voluntarios y Miembros | **Feb - Dic 2025**")
-    
-    # Pestañas del Módulo
-    tab1, tab2, tab3 = st.tabs(["📊 Tablero", "👥 Equipo Voluntarios", "📅 Roadmap 2025"])
-
-    # --- Pestaña 1: Tablero ---
-    with tab1:
-        # Cargamos datos para las métricas
-        df_vol = cargar_datos("PMO_VOLUNTARIOS", 4)
-        
-        c1, c2, c3 = st.columns(3)
-        total_vol = len(df_vol) if not df_vol.empty else 0
-        activos = len(df_vol[df_vol['Estado'] == 'Activo']) if not df_vol.empty else 0
-        
-        c1.metric("Total Voluntarios", total_vol)
-        c2.metric("Activos Ahora", activos)
-        c3.metric("Próximo Hito", "Marzo (Convocatoria)")
-        
-        st.divider()
-        st.info("🤖 **Arya PMO:** Hola Norma. Recuerda que en Febrero estamos definiendo las categorías de reconocimiento.")
-
-    # --- Pestaña 2: Gestión de Voluntarios ---
-    with tab2:
-        st.subheader("Base de Datos del Equipo")
-        
-        # Formulario para agregar nuevo voluntario
-        with st.expander("➕ Agregar Nuevo Voluntario"):
-            with st.form("nuevo_voluntario"):
-                col_a, col_b = st.columns(2)
-                nombre = col_a.text_input("Nombre Completo")
-                rol = col_b.selectbox("Rol", ["Logística", "Comunicaciones", "Jurado", "Patrocinio", "General"])
-                col_c, col_d = st.columns(2)
-                estado = col_c.selectbox("Estado", ["Activo", "Pendiente", "Inactivo"])
-                puntos = col_d.number_input("Puntos Iniciales", value=0)
-                
-                if st.form_submit_button("Guardar Voluntario"):
-                    nuevo_v = pd.DataFrame([{"Nombre": nombre, "Rol": rol, "Estado": estado, "Puntos": puntos}])
-                    # Si no existe df_vol, lo crea
-                    df_actual = cargar_datos("PMO_VOLUNTARIOS", 4)
-                    guardar_datos("PMO_VOLUNTARIOS", pd.concat([df_actual, nuevo_v], ignore_index=True))
-
-        # Mostrar y Editar la Tabla
-        df_vol = cargar_datos("PMO_VOLUNTARIOS", 4)
-        if not df_vol.empty:
-            edited_vol = st.data_editor(
-                df_vol, 
-                num_rows="dynamic", 
-                use_container_width=True,
-                column_config={
-                    "Estado": st.column_config.SelectboxColumn("Estado", options=["Activo", "Pendiente", "Inactivo"]),
-                    "Puntos": st.column_config.ProgressColumn("Puntos", min_value=0, max_value=200, format="%d pts")
-                }
-            )
-            if st.button("💾 Actualizar Equipo"):
-                guardar_datos("PMO_VOLUNTARIOS", edited_vol)
-        else:
-            st.warning("Aún no tienes voluntarios registrados. ¡Agrega el primero arriba!")
-
-    # --- Pestaña 3: Roadmap (Cronograma) ---
-    with tab3:
-        st.subheader("📍 Línea de Tiempo del Proyecto")
-        # Esto es visual, no necesita base de datos por ahora
-        timeline_data = [
-            {"Mes": "Febrero", "Actividad": "Kick-off y Definición Categorías", "Estado": "✅ Listo"},
-            {"Mes": "Marzo", "Actividad": "Convocatoria de Postulados", "Estado": "🔄 En Curso"},
-            {"Mes": "Junio", "Actividad": "Primer Corte Evaluación", "Estado": "⏳ Pendiente"},
-            {"Mes": "Septiembre", "Actividad": "Gala Semestral", "Estado": "⏳ Pendiente"},
-            {"Mes": "Diciembre", "Actividad": "Cierre y Premiación Anual", "Estado": "⏳ Pendiente"},
-        ]
-        st.dataframe(pd.DataFrame(timeline_data), use_container_width=True)
