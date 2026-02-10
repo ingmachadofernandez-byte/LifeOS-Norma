@@ -36,7 +36,7 @@ with st.sidebar:
     st.write("### Hola, Norma 👋")
     selected = option_menu(
         menu_title=None,
-        options=["Dashboard", "💰 Finanzas", "🚀 Numbra", " PMO HUB ", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
+        options=options=["Dashboard", "💰 Finanzas", "🚀 Numbra", "🏆 PMO Hub", "🏛️ Alcaldía", "💪 Bienestar", "✨ Sueños", "📝 Notas", "💙 MIRA", "🧠 Estudio"],
         icons=["grid", "cash-coin", "rocket-takeoff", "bank", "heart-pulse", "stars", "journal-text", "people-fill", "book"],
         default_index=0,
     )
